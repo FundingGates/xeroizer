@@ -16,10 +16,34 @@ module Xeroizer
   module Http
     class BadResponse < StandardError; end
 
+    class Request
+      attr_reader :method, :url, :headers, :body
+
+      def initialize(method, url, headers, body)
+        @method = method
+        @url = url
+        @headers = headers
+        @body = body
+      end
+
+    end
+
+
     ACCEPT_MIME_MAP = {
       :pdf  => 'application/pdf',
       :json => 'application/json'
     }
+
+
+    def on_request(&block)
+      @on_request = block
+    end
+
+    def fire_on_request(method, uri, headers, body, response)
+      if @on_request
+        @on_request.call(Request.new(method, uri.request_uri, headers, body), response)
+      end
+    end
 
     # Shortcut method for #http_request with `method` = :get.
     #
@@ -98,6 +122,8 @@ module Xeroizer
           end
 
           log_response(response, uri)
+
+          fire_on_request(method, uri, headers, body, response)
 
           case response.code.to_i
             when 200
