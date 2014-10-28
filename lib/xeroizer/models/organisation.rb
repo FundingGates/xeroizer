@@ -33,6 +33,14 @@ module Xeroizer
       has_many :addresses
       has_many :phones
 
+      def billing_address
+        addresses.select {|a| a.type == 'POBOX'}.first
+      end
+
+      def street_address
+        addresses.select {|a| a.type == 'STREET'}.first
+      end
+
     end
     
   end
