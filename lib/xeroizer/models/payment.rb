@@ -15,6 +15,7 @@ module Xeroizer
       guid          :payment_id
       date          :date
       decimal       :amount
+      string       :currency_code
       decimal       :currency_rate
       string        :payment_type
       string        :status
