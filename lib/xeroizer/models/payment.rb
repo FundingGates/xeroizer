@@ -16,7 +16,7 @@ module Xeroizer
       date          :date
       decimal       :amount
       string       :currency_code
-      decimal       :currency_rate
+      decimal       :currency_rate, value_if_nil: 1.0
       string        :payment_type
       string        :status
       string        :reference

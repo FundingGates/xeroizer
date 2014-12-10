@@ -80,7 +80,8 @@ module Xeroizer
         end
 
         def define_association_attribute(field_name, internal_field_name, association_type, options)
-          define_simple_attribute(field_name, association_type, options.merge!(:skip_writer => true), ((association_type == :has_many) ? [] : nil))
+          empty_value = (association_type == :has_many) ? [] : nil
+          define_simple_attribute(field_name, association_type, options.merge!(:skip_writer => true, value_if_nil: empty_value))
 
           internal_field_name = options[:internal_name] || field_name
           internal_singular_field_name = internal_field_name.to_s.singularize
@@ -90,7 +91,7 @@ module Xeroizer
             record_class = Xeroizer::Record.const_get(model_name)
             case value
               when Hash
-                self.attributes[field_name] = ((association_type == :has_many) ? [] : nil)
+                self.attributes[field_name] = empty_value
                 case association_type
                   when :has_many
                     self.attributes[field_name] = []
@@ -102,7 +103,7 @@ module Xeroizer
                 end
 
               when Array
-                self.attributes[field_name] = ((association_type == :has_many) ? [] : nil)
+                self.attributes[field_name] = empty_value
                 value.each do | single_value |
                   case single_value
                     when Hash         then send("add_#{internal_singular_field_name}".to_sym, single_value)
@@ -128,7 +129,7 @@ module Xeroizer
           if list_contains_summary_only?
             define_method internal_field_name do
               download_complete_record! unless new_record? || options[:list_complete] || options[:complete_on_page] && paged_record_downloaded? || complete_record_downloaded?
-              self.attributes[field_name] || ((association_type == :has_many) ? [] : nil)
+              self.attributes[field_name] || empty_value
             end
           end
         end
