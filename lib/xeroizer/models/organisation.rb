@@ -37,6 +37,10 @@ module Xeroizer
         addresses.select {|a| a.type == 'POBOX'}.first
       end
 
+      def shipping_address
+        addresses.select {|a| a.type == 'DELIVERY'}.first
+      end
+
       def street_address
         addresses.select {|a| a.type == 'STREET'}.first
       end
