@@ -15,6 +15,7 @@
 module Xeroizer
   module Http
     class BadResponse < StandardError; end
+    RequestInfo = Struct.new(:url, :headers, :params, :body)
 
     class Request
       attr_reader :method, :url, :headers, :body
@@ -81,6 +82,9 @@ module Xeroizer
 
         headers = self.default_headers.merge({ 'charset' => 'utf-8' })
 
+        # include the unitdp query string parameter
+        params.merge!(unitdp_param(url))
+
         if method != :get
           headers['Content-Type'] ||= "application/x-www-form-urlencoded"
         end
@@ -105,9 +109,12 @@ module Xeroizer
           url += "?" + params.map {|key,value| "#{CGI.escape(key.to_s)}=#{CGI.escape(value.to_s)}"}.join("&")
         end
 
-        uri   = URI.parse(url)
+        uri = URI.parse(url)
 
         attempts = 0
+
+        request_info = RequestInfo.new(url, headers, params, body)
+        before_request.call(request_info) if before_request
 
         begin
           attempts += 1
@@ -122,8 +129,9 @@ module Xeroizer
           end
 
           log_response(response, uri)
-
+          
           fire_on_request(method, uri, headers, body, response)
+          after_request.call(request_info, response) if after_request
 
           case response.code.to_i
             when 200
@@ -223,6 +231,14 @@ module Xeroizer
 
       def sleep_for(seconds = 1)
         sleep seconds
+      end
+
+      # unitdp query string parameter to be added to request params
+      # when the application option has been set and the model has line items
+      # http://developer.xero.com/documentation/advanced-docs/rounding-in-xero/#unitamount
+      def unitdp_param(request_url)
+        models = [/Invoices/, /CreditNotes/, /BankTransactions/, /Receipts/]
+        self.unitdp == 4 && models.any?{ |m| request_url =~ m } ? {:unitdp => 4} : {}
       end
 
   end

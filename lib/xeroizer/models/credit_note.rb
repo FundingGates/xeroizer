@@ -1,10 +1,10 @@
 module Xeroizer
   module Record
-    
+
     class CreditNoteModel < BaseModel
-        
+
       set_permissions :read, :write, :update
-      
+
       public
 
         # Retrieve the PDF version of the credit matching the `id`.
@@ -19,11 +19,11 @@ module Xeroizer
             pdf_data
           end
         end
-      
+
     end
-    
+
     class CreditNote < Base
-      
+
       CREDIT_NOTE_STATUS = {
         'AUTHORISED' =>       'Approved credit_notes awaiting payment',
         'DELETED' =>          'Draft credit_notes that are deleted',
@@ -33,17 +33,17 @@ module Xeroizer
         'VOIDED' =>           'Approved credit_notes that are voided'
       } unless defined?(CREDIT_NOTE_STATUS)
       CREDIT_NOTE_STATUSES = CREDIT_NOTE_STATUS.keys.sort
-      
+
       CREDIT_NOTE_TYPE = {
         'ACCRECCREDIT' =>           'Accounts Receivable',
         'ACCPAYCREDIT' =>           'Accounts Payable'
       } unless defined?(CREDIT_NOTE_TYPE)
       CREDIT_NOTE_TYPES = CREDIT_NOTE_TYPE.keys.sort
-      
+
       set_primary_key :credit_note_id
       set_possible_primary_keys :credit_note_id, :credit_note_number
       list_contains_summary_only true
-      
+
       guid          :credit_note_id
       string        :credit_note_number
       string        :reference
@@ -60,17 +60,18 @@ module Xeroizer
       decimal       :currency_rate, value_if_nil: 1.0
       datetime      :fully_paid_on_date
       boolean       :sent_to_contact
-      
+      decimal :remaining_credit
+
       belongs_to    :contact
       has_many      :line_items
       has_many      :allocations, :list_complete => true
-      
+
       validates_inclusion_of :type, :in => CREDIT_NOTE_TYPES
       validates_inclusion_of :status, :in => CREDIT_NOTE_STATUSES, :allow_blanks => true
       validates_associated :contact
       validates_associated :line_items
       validates_associated :allocations, :allow_blanks => true
-      
+
       public
 
         def raw_allocations
@@ -87,20 +88,20 @@ module Xeroizer
         # incomplete, summary credit note.
         def contact_id
           attributes[:contact] && attributes[:contact][:contact_id]
-        end      
-      
+        end
+
         # Swallow assignment of attributes that should only be calculated automatically.
         def sub_total=(value);  raise SettingTotalDirectlyNotSupported.new(:sub_total);   end
         def total_tax=(value);  raise SettingTotalDirectlyNotSupported.new(:total_tax);   end
         def total=(value);      raise SettingTotalDirectlyNotSupported.new(:total);       end
-      
+
         # Calculate sub_total from line_items.
         def sub_total(always_summary = false)
           if !always_summary && (new_record? || (!new_record? && line_items && line_items.size > 0))
             sum = (line_items || []).inject(BigDecimal.new('0')) { | sum, line_item | sum + line_item.line_amount }
-            
+
             # If the default amount types are inclusive of 'tax' then remove the tax amount from this sub-total.
-            sum -= total_tax if line_amount_types == 'Inclusive' 
+            sum -= total_tax if line_amount_types == 'Inclusive'
             sum
           else
             attributes[:sub_total]
@@ -124,14 +125,38 @@ module Xeroizer
             attributes[:total]
           end
         end
-        
+
         # Retrieve the PDF version of this credit note.
         # @param [String] filename optional filename to store the PDF in instead of returning the data.
         def pdf(filename = nil)
           parent.pdf(id, filename)
         end
-              
+
+        def save
+          # Calling parse_save_response() on the credit note will wipe out
+          # the allocations, so we have to manually preserve them.
+          allocations_backup = self.allocations
+          if super
+            self.allocations = allocations_backup
+            allocate unless self.allocations.empty?
+            true
+          end
+        end
+
+        def allocate
+          if self.class.possible_primary_keys && self.class.possible_primary_keys.all? { | possible_key | self[possible_key].nil? }
+            raise RecordKeyMustBeDefined.new(self.class.possible_primary_keys)
+          end
+
+          request = association_to_xml(:allocations)
+          allocations_url = "#{parent.url}/#{CGI.escape(id)}/Allocations"
+
+          log "[ALLOCATION SENT] (#{__FILE__}:#{__LINE__}) \r\n#{request}"
+          response = parent.application.http_put(parent.application.client, allocations_url, request)
+          log "[ALLOCATION RECEIVED] (#{__FILE__}:#{__LINE__}) \r\n#{response}"
+          parse_save_response(response)
+        end
     end
-    
+
   end
 end

@@ -1,12 +1,12 @@
 module Xeroizer
   module Record
-    
+
     class PhoneModel < BaseModel
-            
+
     end
-    
+
     class Phone < Base
-      
+
       PHONE_TYPE = {
         'DEFAULT' =>    'Default',
         'DDI' =>        'Direct Dial-In',
@@ -19,11 +19,11 @@ module Xeroizer
       string :phone_area_code, :internal_name => :area_code
       string :phone_country_code, :internal_name => :country_code
 
+      validates_length_of :phone_number, :max => 50
+
       def empty?
         number.nil? && area_code.nil? && country_code.nil?
       end
-
     end
-    
   end
 end
