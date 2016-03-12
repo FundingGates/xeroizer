@@ -18,7 +18,11 @@ module Xeroizer
       string :phone_number, :internal_name => :number
       string :phone_area_code, :internal_name => :area_code
       string :phone_country_code, :internal_name => :country_code
-      
+
+      def empty?
+        number.nil? && area_code.nil? && country_code.nil?
+      end
+
     end
     
   end

@@ -150,7 +150,7 @@ module Xeroizer
           if @objects[model_class]
             objects = @objects[model_class].values.compact
             return false unless objects.all?(&:valid?)
-            actions = objects.group_by {|o| o.new_record? ? :http_put : create_method }
+            actions = objects.group_by {|o| o.new_record? ? create_method : :http_post }
             actions.each_pair do |http_method, records|
               records.each_slice(chunk_size) do |some_records|
                 request = to_bulk_xml(some_records)
@@ -176,19 +176,25 @@ module Xeroizer
           Response.parse(response_xml, options) do | response, elements, response_model_name |
             if model_name == response_model_name
               @response = response
-              parse_records(response, elements)
+              parse_records(response, elements, paged_records_requested?(options))
             end
           end
         end
 
         def create_method
-          :http_post
+          :http_put
         end
 
       protected
 
-        # Parse the records part of the XML response and builds model instances as necessary.
-        def parse_records(response, elements)
+
+        def paged_records_requested?(options)
+          options[:page].to_i > 0
+        end
+
+
+      # Parse the records part of the XML response and builds model instances as necessary.
+        def parse_records(response, elements, paged_results)
           elements.each do | element |
             new_record = model_class.build_from_node(element, self)
             if element.attribute('status').try(:value) == 'ERROR'
@@ -197,6 +203,7 @@ module Xeroizer
                 new_record.errors << err.text.gsub(/^\s+/, '').gsub(/\s+$/, '')
               end
             end
+            new_record.paged_record_downloaded = paged_results
             response.response_items << new_record
           end
         end

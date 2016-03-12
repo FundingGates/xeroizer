@@ -25,7 +25,11 @@ module Xeroizer
       string :country
       
       validates_inclusion_of :type, :in => ADDRESS_TYPE.keys
-      
+
+      def empty?
+        attention_to.nil? && line1.nil? && line2.nil? && line3.nil? && line4.nil? && city.nil? && region.nil? && postal_code.nil? && country.nil?
+      end
+
     end
     
   end

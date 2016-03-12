@@ -80,7 +80,7 @@ module Xeroizer
         end
 
         def define_association_attribute(field_name, internal_field_name, association_type, options)
-          define_simple_attribute(field_name, association_type, options.merge!(:skip_writer => true), ((association_type == :has_many) ? [] : nil))
+          define_simple_attribute(field_name, association_type, options.merge!(:skip_writer => true, value_if_nil: ((association_type == :has_many) ? [] : nil)))
 
           internal_field_name = options[:internal_name] || field_name
           internal_singular_field_name = internal_field_name.to_s.singularize
@@ -127,7 +127,7 @@ module Xeroizer
           # the complete version of the record before accessing the association.
           if list_contains_summary_only?
             define_method internal_field_name do
-              download_complete_record! unless new_record? || options[:list_complete] || complete_record_downloaded?
+              download_complete_record! unless new_record? || options[:list_complete] || options[:complete_on_page] && paged_record_downloaded? || complete_record_downloaded?
               self.attributes[field_name] || ((association_type == :has_many) ? [] : nil)
             end
           end

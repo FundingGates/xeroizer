@@ -38,8 +38,8 @@ module Xeroizer
         # Helper methods used to define the fields this model has.
         def string(field_name, options = {});     define_simple_attribute(field_name, :string, options); end
         def boolean(field_name, options = {});    define_simple_attribute(field_name, :boolean, options); end
-        def integer(field_name, options = {});    define_simple_attribute(field_name, :integer, options, 0); end
-        def decimal(field_name, options = {});    define_simple_attribute(field_name, :decimal, options, 0.0); end
+        def integer(field_name, options = {});    define_simple_attribute(field_name, :integer, {value_if_nil: 0}.merge(options)); end
+        def decimal(field_name, options = {});    define_simple_attribute(field_name, :decimal, {value_if_nil: 0.0}.merge(options)); end
         def date(field_name, options = {});       define_simple_attribute(field_name, :date, options); end
         def datetime(field_name, options = {});   define_simple_attribute(field_name, :datetime, options); end
         def datetime_utc(field_name, options = {});   define_simple_attribute(field_name, :datetime_utc, options); end
@@ -58,7 +58,7 @@ module Xeroizer
         #   :model_name => allows class used for children to be different from it's ndoe name in the XML.
         #   :type => type of field
         #   :skip_writer => skip the writer method
-        def define_simple_attribute(field_name, field_type, options, value_if_nil = nil)
+        def define_simple_attribute(field_name, field_type, options)
           self.fields ||= {}
           
           internal_field_name = options[:internal_name] || field_name
@@ -68,7 +68,7 @@ module Xeroizer
             :type           => field_type
           })
           define_method internal_field_name do 
-            @attributes[field_name] || value_if_nil
+            @attributes[field_name] || options[:value_if_nil]
           end
           
           unless options[:skip_writer]

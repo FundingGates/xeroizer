@@ -57,12 +57,13 @@ module Xeroizer
       decimal       :total, :calculated => true
       datetime_utc  :updated_date_utc, :api_name => 'UpdatedDateUTC'
       string        :currency_code
+      decimal       :currency_rate, value_if_nil: 1.0
       datetime      :fully_paid_on_date
       boolean       :sent_to_contact
       
       belongs_to    :contact
       has_many      :line_items
-      has_many      :allocations
+      has_many      :allocations, :list_complete => true
       
       validates_inclusion_of :type, :in => CREDIT_NOTE_TYPES
       validates_inclusion_of :status, :in => CREDIT_NOTE_STATUSES, :allow_blanks => true
@@ -71,7 +72,11 @@ module Xeroizer
       validates_associated :allocations, :allow_blanks => true
       
       public
-      
+
+        def raw_allocations
+          attributes[:allocations]
+        end
+
         # Access the contact name without forcing a download of
         # an incomplete, summary credit note.
         def contact_name
