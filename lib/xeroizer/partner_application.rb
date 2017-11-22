@@ -23,9 +23,7 @@ module Xeroizer
           :signature_method => 'RSA-SHA1'
         }
         options = default_options.merge(options).merge(
-          :private_key_file => path_to_private_key,
-          :ssl_client_cert  => OpenSSL::X509::Certificate.new(read_certificate(ssl_client_cert)),
-          :ssl_client_key   => OpenSSL::PKey::RSA.new(read_certificate(ssl_client_key))
+          :private_key_file => path_to_private_key
         )
         super(consumer_key, consumer_secret, options)
 

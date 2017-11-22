@@ -26,7 +26,6 @@ module Xeroizer
         @headers = headers
         @body = body
       end
-
     end
 
 
